@@ -1,0 +1,5 @@
+C:/Grafika/hw1/cmake-build-debug/CMakeFiles/program.dir
+C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glut.dir
+C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew.dir
+C:/Grafika/hw1/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Grafika/hw1/cmake-build-debug/CMakeFiles/rebuild_cache.dir

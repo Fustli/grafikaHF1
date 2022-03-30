@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew-complete.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-build.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-configure.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-download.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-install.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-mkdir.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-patch.rule"
+		},
+		{
+			"file" : "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glew"
+		],
+		"name" : "glew"
+	}
+}

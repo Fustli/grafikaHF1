@@ -1,0 +1,3 @@
+repository='external project URL'
+module='https://www.transmissionzero.co.uk/files/software/development/GLUT/freeglut-MinGW.zip'
+tag=''
