@@ -1,7 +1,7 @@
 # Make file names absolute:
 #
-get_filename_component(filename "C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-2.1.0-win32.zip" ABSOLUTE)
-get_filename_component(directory "C:/Grafika/hw1/src/glew" ABSOLUTE)
+get_filename_component(filename "C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-2.1.0-win32.zip" ABSOLUTE)
+get_filename_component(directory "C:/Grafika/grafikaHF1/src/glew" ABSOLUTE)
 
 message(STATUS "extracting...
      src='${filename}'

@@ -57,7 +57,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "program::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-program-Debug-65eb7b8063c101ea65ec.json",
+					"jsonFile" : "target-program-Debug-5a1affe153f2120e94f8.json",
 					"name" : "program",
 					"projectIndex" : 0
 				}
@@ -67,8 +67,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/Grafika/hw1/cmake-build-debug",
-		"source" : "C:/Grafika/hw1"
+		"build" : "C:/Grafika/grafikaHF1/cmake-build-debug",
+		"source" : "C:/Grafika/grafikaHF1"
 	},
 	"version" : 
 	{

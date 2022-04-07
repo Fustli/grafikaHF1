@@ -1,13 +1,13 @@
 # Target labels
  glew
 # Source files and their labels
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew.rule
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glew-complete.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-build.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-configure.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-download.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-install.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-mkdir.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-patch.rule
-C:/Grafika/hw1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-update.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glew
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glew.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glew-complete.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-build.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-configure.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-download.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-install.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-mkdir.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-patch.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glew-prefix/src/glew-stamp/glew-update.rule

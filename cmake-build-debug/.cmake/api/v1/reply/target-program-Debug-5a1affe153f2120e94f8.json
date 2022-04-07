@@ -96,15 +96,15 @@
 			[
 				{
 					"backtrace" : 5,
-					"path" : "C:/Grafika/hw1/include"
+					"path" : "C:/Grafika/grafikaHF1/include"
 				},
 				{
 					"backtrace" : 6,
-					"path" : "C:/Grafika/hw1/src/freeglut/include"
+					"path" : "C:/Grafika/grafikaHF1/src/freeglut/include"
 				},
 				{
 					"backtrace" : 6,
-					"path" : "C:/Grafika/hw1/src/glew/include"
+					"path" : "C:/Grafika/grafikaHF1/src/glew/include"
 				}
 			],
 			"language" : "CXX",
@@ -127,11 +127,11 @@
 	[
 		{
 			"backtrace" : 4,
-			"id" : "glew::@6890427a1f51a3e7e1df"
+			"id" : "glut::@6890427a1f51a3e7e1df"
 		},
 		{
 			"backtrace" : 4,
-			"id" : "glut::@6890427a1f51a3e7e1df"
+			"id" : "glew::@6890427a1f51a3e7e1df"
 		}
 	],
 	"id" : "program::@6890427a1f51a3e7e1df",
@@ -149,12 +149,12 @@
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "-LC:\\Grafika\\hw1\\src\\freeglut\\lib\\x64",
+				"fragment" : "-LC:\\Grafika\\grafikaHF1\\src\\freeglut\\lib\\x64",
 				"role" : "libraryPath"
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "-LC:\\Grafika\\hw1\\src\\glew\\lib\\Release\\x64",
+				"fragment" : "-LC:\\Grafika\\grafikaHF1\\src\\glew\\lib\\Release\\x64",
 				"role" : "libraryPath"
 			},
 			{

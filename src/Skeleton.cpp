@@ -50,7 +50,7 @@ const char * const vertexSource = R"(
 const char * const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
-	
+
 	uniform vec3 color;		// uniform variable, the color of the primitive
 	out vec4 outColor;		// computed color of the current pixel
 
@@ -58,62 +58,98 @@ const char * const fragmentSource = R"(
 		outColor = vec4(color, 1);	// computed color is the color of the primitive
 	}
 )";
-
 GPUProgram gpuProgram; // vertex and fragment shaders
-unsigned int vao;	   // virtual world on the GPU
+unsigned int vertexArray;
+unsigned int buffer;
+unsigned int vbo;		// vertex buffer object
 
-// Initialization, create an OpenGL context
+//"atomhoz" körhöz tartozó struct és tagváltozók
+const int nv = 100;
+const float PI = 3.1415;
+const float angle = PI * 2 / nv;
+float radius = 1.f;
+const int r = 0.5;
+
+struct Atom{
+    vec2 pos;
+    vec3 color;
+
+    Atom(vec2 pos, float r, float g, float b){
+        pos.x = this->pos.x;
+        pos.y = this->pos.y;
+        color.x = r;
+        color.y = g;
+        color.z = b;
+    }
+
+    void Create() {
+        glGenVertexArrays(1, &buffer);	// get 1 vao id
+        glBindVertexArray(buffer);		// make it active
+
+        glGenBuffers(1, &vbo);	// Generate 1 buffer
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        // Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
+
+        vec2 vertices[nv];
+        for (int i = 0; i < nv; i++) {
+            float fi = i * 2 * M_PI / nv;
+            vertices[i] = vec2(cosf(fi), sinf(fi));
+        }
+        glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
+                     sizeof(vec2) * nv,  // # bytes
+                     vertices,	      	// address
+                     GL_STATIC_DRAW);	// we do not change later
+
+        glEnableVertexAttribArray(0);  // AttribArray 0
+        glVertexAttribPointer(0,       // vbo -> AttribArray 0
+                              2, GL_FLOAT, GL_FALSE, // two floats/attrib, not fixed-point
+                              0, NULL); 		     // stride, offset: tightly packed
+    }
+
+    void Draw(){
+        for (int i = -4; i <= 4; i++){
+            // Set color to (0, 1, 0) = green
+            int location = glGetUniformLocation(gpuProgram.getId(), "color");
+
+            float MVPtransf[4][4] = { 0.1f, 0, 0, 0,    // MVP matrix,
+                                      0, 0.1f, 0, 0,    // row-major!
+                                      0, 0, 0, 0,
+                                      0.2f*i, 0.2f*i, 0, 1 };
+
+            glUniform3f(location, 1, 0, 0); // 3 floats
+            location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
+            glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
+
+            glBindVertexArray(buffer);  // Draw call
+            glDrawArrays(GL_TRIANGLE_FAN, 0 /*startIdx*/, nv /*# Elements*/);
+        }
+    }
+};
+
+Atom Atom = Atom;
+
 void onInitialization() {
-	glViewport(0, 0, windowWidth, windowHeight);
+    glViewport(0, 0, windowWidth, windowHeight);
 
-	glGenVertexArrays(1, &vao);	// get 1 vao id
-	glBindVertexArray(vao);		// make it active
+    Atom.Create();
 
-	unsigned int vbo;		// vertex buffer object
-	glGenBuffers(1, &vbo);	// Generate 1 buffer
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	// Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
-	float vertices[] = { -0.8f, -0.8f, -0.6f, 1.0f, 0.8f, -0.2f };
-	glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
-		sizeof(vertices),  // # bytes
-		vertices,	      	// address
-		GL_STATIC_DRAW);	// we do not change later
-
-	glEnableVertexAttribArray(0);  // AttribArray 0
-	glVertexAttribPointer(0,       // vbo -> AttribArray 0
-		2, GL_FLOAT, GL_FALSE, // two floats/attrib, not fixed-point
-		0, NULL); 		     // stride, offset: tightly packed
-
-	// create program for the GPU
-	gpuProgram.create(vertexSource, fragmentSource, "outColor");
+    gpuProgram.create(vertexSource, fragmentSource, "outColor");
 }
 
-// Window has become invalid: Redraw
+
 void onDisplay() {
-	glClearColor(0, 0, 0, 0);     // background color
-	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
 
-	// Set color to (0, 1, 0) = green
-	int location = glGetUniformLocation(gpuProgram.getId(), "color");
-	glUniform3f(location, 0.0f, 1.0f, 0.0f); // 3 floats
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
-							  0, 1, 0, 0,    // row-major!
-							  0, 0, 1, 0,
-							  0, 0, 0, 1 };
+    Atom.Draw();
 
-	location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
-	glBindVertexArray(vao);  // Draw call
-	glDrawArrays(GL_TRIANGLES, 0 /*startIdx*/, 3 /*# Elements*/);
-
-	glutSwapBuffers(); // exchange buffers for double buffering
+    glutSwapBuffers(); // exchange buffers for double buffering
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'd') glutPostRedisplay();         // if d, invalidate display, i.e. redraw
 }
 
 // Key of ASCII code released
@@ -123,29 +159,13 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 // Move mouse with key pressed
 void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
 	// Convert to normalized device space
-	float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
-	float cY = 1.0f - 2.0f * pY / windowHeight;
-	printf("Mouse moved to (%3.2f, %3.2f)\n", cX, cY);
+
 }
 
 // Mouse click event
 void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	// Convert to normalized device space
-	float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
-	float cY = 1.0f - 2.0f * pY / windowHeight;
-
-	char * buttonStat;
-	switch (state) {
-	case GLUT_DOWN: buttonStat = "pressed"; break;
-	case GLUT_UP:   buttonStat = "released"; break;
 	}
 
-	switch (button) {
-	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);   break;
-	case GLUT_MIDDLE_BUTTON: printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
-	case GLUT_RIGHT_BUTTON:  printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);  break;
-	}
-}
 
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {

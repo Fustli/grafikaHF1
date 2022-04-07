@@ -1,13 +1,13 @@
 # Target labels
  glut
 # Source files and their labels
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glut
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glut.rule
-C:/Grafika/hw1/cmake-build-debug/CMakeFiles/glut-complete.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-build.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-configure.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-download.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-install.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-mkdir.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-patch.rule
-C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-update.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glut
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glut.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/CMakeFiles/glut-complete.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-build.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-configure.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-download.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-install.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-mkdir.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-patch.rule
+C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/glut-stamp/glut-update.rule

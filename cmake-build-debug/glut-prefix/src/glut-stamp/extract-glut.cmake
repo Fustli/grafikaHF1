@@ -1,7 +1,7 @@
 # Make file names absolute:
 #
-get_filename_component(filename "C:/Grafika/hw1/cmake-build-debug/glut-prefix/src/freeglut-MinGW.zip" ABSOLUTE)
-get_filename_component(directory "C:/Grafika/hw1/src/freeglut" ABSOLUTE)
+get_filename_component(filename "C:/Grafika/grafikaHF1/cmake-build-debug/glut-prefix/src/freeglut-MinGW.zip" ABSOLUTE)
+get_filename_component(directory "C:/Grafika/grafikaHF1/src/freeglut" ABSOLUTE)
 
 message(STATUS "extracting...
      src='${filename}'
