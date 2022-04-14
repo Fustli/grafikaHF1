@@ -6,20 +6,20 @@
 // - mast "beincludolni", illetve mas konyvtarat hasznalni
 // - faljmuveleteket vegezni a printf-et kiveve
 // - Mashonnan atvett programresszleteket forrasmegjeloles nelkul felhasznalni es
-// - felesleges programsorokat a beadott programban hagyni!!!!!!! 
+// - felesleges programsorokat a beadott programban hagyni!!!!!!!
 // - felesleges kommenteket a beadott programba irni a forrasmegjelolest kommentjeit kiveve
 // ---------------------------------------------------------------------------------------------
 // A feladatot ANSI C++ nyelvu forditoprogrammal ellenorizzuk, a Visual Studio-hoz kepesti elteresekrol
 // es a leggyakoribb hibakrol (pl. ideiglenes objektumot nem lehet referencia tipusnak ertekul adni)
 // a hazibeado portal ad egy osszefoglalot.
 // ---------------------------------------------------------------------------------------------
-// A feladatmegoldasokban csak olyan OpenGL fuggvenyek hasznalhatok, amelyek az oran a feladatkiadasig elhangzottak 
+// A feladatmegoldasokban csak olyan OpenGL fuggvenyek hasznalhatok, amelyek az oran a feladatkiadasig elhangzottak
 // A keretben nem szereplo GLUT fuggvenyek tiltottak.
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : 
-// Neptun : 
+// Nev    :
+// Neptun :
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy
 // mas szellemi termeket felhasznaltam, akkor a forrast es az atvett reszt kommentekben egyertelmuen jeloltem.
@@ -58,77 +58,80 @@ const char * const fragmentSource = R"(
 		outColor = vec4(color, 1);	// computed color is the color of the primitive
 	}
 )";
+
+// 2D camera
+class Camera2D {
+    vec2 wCenter; // center in world coordinates
+    vec2 wSize;   // width and height in world coordinates
+public:
+    Camera2D() : wCenter(0, 0), wSize(200, 200) { }
+
+    mat4 V() { return TranslateMatrix(-wCenter); }
+    mat4 P() { return ScaleMatrix(vec2(2 / wSize.x, 2 / wSize.y)); }
+
+    mat4 Vinv() { return TranslateMatrix(wCenter); }
+    mat4 Pinv() { return ScaleMatrix(vec2(wSize.x / 2, wSize.y / 2)); }
+
+    void Zoom(float s) { wSize = wSize * s; }
+    void Pan(vec2 t) { wCenter = wCenter + t; }
+};
+
+Camera2D camera;
 GPUProgram gpuProgram; // vertex and fragment shaders
-unsigned int vertexArray;
 
-
-
-struct Atom{
+class Atom{
     vec2 pos;
     vec3 color;
     float charge;
-
-    const int nv = 100;
-    const float PI = 3.1415;
-    const float angle = PI * 2 / nv;
-    float radius = 1.0f;
-    const int r = 0.5;
-    unsigned int vbo;		// vertex buffer object
     unsigned int vao;
+    float sx, sy, phi;
+    vec2 wTranslate;
 
-    Atom(vec2 pos, float r, float g, float b){
+    const int nv = 30;
+
+public:
+    Atom(vec2 pos, vec3 color){
         pos.x = this->pos.x;
         pos.y = this->pos.y;
-        color.x = r;
-        color.y = g;
-        color.z = b;
+        color.x = this->color.x;
+        color.y = this->color.y;
+        color.z = this->color.z;
     }
 
+
+    void Animate(float t) {
+        sx = 10;
+        sy = 10;
+        phi = t;
+    }
+
+    mat4 M() {
+		mat4 Mscale(1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 0, 0,
+			0, 0, 0, 1); // scaling
+
+		mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
+			-sinf(phi), cosf(phi), 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1); // rotation
+
+		mat4 Mtranslate(1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 0, 0,
+			wTranslate.x, wTranslate.y, 0, 1); // translation
+
+		return Mscale * Mrotate * Mtranslate;	// model transformation
+	}
 
     void Create() {
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
 
-        glGenBuffers(1, &vbo);	// Generate 1 buffer
+        unsigned int vbo;
+        glGenBuffers(1, &vbo);	// Generate 2 buffers
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         // Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
-
-        glEnableVertexAttribArray(0);  // AttribArray 0
-        glVertexAttribPointer(0,       // vbo -> AttribArray 0
-                              2, GL_FLOAT, GL_FALSE, // two floats/attrib, not fixed-point
-                              0, NULL); 		     // stride, offset: tightly packed
-    }
-
-    mat4 M(){
-        mat4 M() {
-            mat4 Mscale(sx, 0, 0, 0,
-                        0, sy, 0, 0,
-                        0, 0, 0, 0,
-                        0, 0, 0, 1); // scaling
-
-            mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
-                         -sinf(phi), cosf(phi), 0, 0,
-                         0, 0, 1, 0,
-                         0, 0, 0, 1); // rotation
-
-            mat4 Mtranslate(1, 0, 0, 0,
-                            0, 1, 0, 0,
-                            0, 0, 0, 0,
-                            wTranslate.x, wTranslate.y, 0, 1); // translation
-
-            return Mscale * Mrotate * Mtranslate;	// model transformation
-        }
-
-
-
-    }
-
-
-
-    void Draw(){
-        int location = glGetUniformLocation(gpuProgram.getId(), "color");
-
-
 
         vec2 vertices[nv];
         for (int i = 0; i < nv; i++) {
@@ -141,23 +144,39 @@ struct Atom{
                      vertices,	      	// address
                      GL_STATIC_DRAW);	// we do not change later
 
-            float MVPtransf[4][4] = { 0.05f, 0, 0, 0,    // MVP matrix,
+        glEnableVertexAttribArray(0);  // AttribArray 0
+
+        glVertexAttribPointer(0,
+                              2, GL_FLOAT, GL_FALSE,
+                              0, NULL);
+
+
+        gpuProgram.create(vertexSource, fragmentSource, "outColor");
+    }
+
+    void Draw(){
+            /*float MVPtransf[4][4] = { 0.05f, 0, 0, 0,    // MVP matrix,
                                       0, 0.05f, 0, 0,    // row-major!
                                       0, 0, 1.0f, 0,
-                                      pos.x, pos.y, 0, 1 };
+                                      pos.x, pos.y, 0, 1 };*/
 
-            glUniform3f(location, color.x, color.y, color.z); // 3 floats
+            int location = glGetUniformLocation(gpuProgram.getId(), "color");
+            glUniform3f(location, 1, 0, 0); // 3 floats
+            mat4 MVPTransform = M() * camera.V() * camera.P();
+            //glUniform3f(location, color.x, color.y, color.z); // 3 floats
+            //location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
+            //glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransform[0][0]);	// Load a 4x4 row-major float matrix to the specified location
+            gpuProgram.setUniform(MVPTransform, "MVP");
 
-            location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-            glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
-            glDrawArrays(GL_TRIANGLE_FAN, 0 /*startIdx*/, nv /*# Elements*/);
+
             glBindVertexArray(vao);  // Draw call
+            glDrawArrays(GL_TRIANGLE_FAN, 0 /*startIdx*/, nv /*# Elements*/);
     }
 };
 
-Atom atom1 = Atom(vec2(0.2f,0.5f),1.0f,0.0f,1.0f);
-
+Atom atom1 = Atom(vec2(0.7f,0.5f),vec3(1.0f,0.0f,1.0f));
+Atom atom2 = Atom(vec2(0.5f,0.5f),vec3(1.0f,0.0f,1.0f));
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
@@ -165,6 +184,7 @@ void onInitialization() {
     atom1.Create();
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
+
 }
 
 
@@ -172,14 +192,23 @@ void onDisplay() {
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-
     atom1.Draw();
+
 
     glutSwapBuffers(); // exchange buffers for double buffering
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
+    switch (key) {
+        case 'd': camera.Pan(vec2(-1, 0)); break;
+        case 'a': camera.Pan(vec2(+1, 0)); break;
+        case 's': camera.Pan(vec2(0, 1)); break;
+        case 'w': camera.Pan(vec2(0, -1)); break;
+        case 'z': camera.Zoom(0.9f); break;
+        case 'Z': camera.Zoom(1.1f); break;
+    }
+    glutPostRedisplay();
 }
 
 // Key of ASCII code released
@@ -199,5 +228,7 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
+    long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
+    float sec = time / 1000.0f;				// convert msec to sec
+    glutPostRedisplay();					// redraw the scene
 }
