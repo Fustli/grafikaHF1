@@ -60,19 +60,21 @@ const char * const fragmentSource = R"(
 )";
 GPUProgram gpuProgram; // vertex and fragment shaders
 unsigned int vertexArray;
-unsigned int buffer;
-unsigned int vbo;		// vertex buffer object
 
-//"atomhoz" körhöz tartozó struct és tagváltozók
-const int nv = 100;
-const float PI = 3.1415;
-const float angle = PI * 2 / nv;
-float radius = 1.f;
-const int r = 0.5;
+
 
 struct Atom{
     vec2 pos;
     vec3 color;
+    float charge;
+
+    const int nv = 100;
+    const float PI = 3.1415;
+    const float angle = PI * 2 / nv;
+    float radius = 1.0f;
+    const int r = 0.5;
+    unsigned int vbo;		// vertex buffer object
+    unsigned int vao;
 
     Atom(vec2 pos, float r, float g, float b){
         pos.x = this->pos.x;
@@ -82,23 +84,14 @@ struct Atom{
         color.z = b;
     }
 
+
     void Create() {
-        glGenVertexArrays(1, &buffer);	// get 1 vao id
-        glBindVertexArray(buffer);		// make it active
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
 
         glGenBuffers(1, &vbo);	// Generate 1 buffer
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         // Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
-
-        vec2 vertices[nv];
-        for (int i = 0; i < nv; i++) {
-            float fi = i * 2 * M_PI / nv;
-            vertices[i] = vec2(cosf(fi), sinf(fi));
-        }
-        glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
-                     sizeof(vec2) * nv,  // # bytes
-                     vertices,	      	// address
-                     GL_STATIC_DRAW);	// we do not change later
 
         glEnableVertexAttribArray(0);  // AttribArray 0
         glVertexAttribPointer(0,       // vbo -> AttribArray 0
@@ -106,44 +99,81 @@ struct Atom{
                               0, NULL); 		     // stride, offset: tightly packed
     }
 
+    mat4 M(){
+        mat4 M() {
+            mat4 Mscale(sx, 0, 0, 0,
+                        0, sy, 0, 0,
+                        0, 0, 0, 0,
+                        0, 0, 0, 1); // scaling
+
+            mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
+                         -sinf(phi), cosf(phi), 0, 0,
+                         0, 0, 1, 0,
+                         0, 0, 0, 1); // rotation
+
+            mat4 Mtranslate(1, 0, 0, 0,
+                            0, 1, 0, 0,
+                            0, 0, 0, 0,
+                            wTranslate.x, wTranslate.y, 0, 1); // translation
+
+            return Mscale * Mrotate * Mtranslate;	// model transformation
+        }
+
+
+
+    }
+
+
+
     void Draw(){
-        for (int i = -4; i <= 4; i++){
-            // Set color to (0, 1, 0) = green
-            int location = glGetUniformLocation(gpuProgram.getId(), "color");
+        int location = glGetUniformLocation(gpuProgram.getId(), "color");
 
-            float MVPtransf[4][4] = { 0.1f, 0, 0, 0,    // MVP matrix,
-                                      0, 0.1f, 0, 0,    // row-major!
-                                      0, 0, 0, 0,
-                                      0.2f*i, 0.2f*i, 0, 1 };
 
-            glUniform3f(location, 1, 0, 0); // 3 floats
+
+        vec2 vertices[nv];
+        for (int i = 0; i < nv; i++) {
+            float fi = i * 2 * M_PI / nv;
+            vertices[i] = vec2(cosf(fi), sinf(fi));
+        }
+
+        glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
+                     sizeof(vec2) * nv,  // # bytes
+                     vertices,	      	// address
+                     GL_STATIC_DRAW);	// we do not change later
+
+            float MVPtransf[4][4] = { 0.05f, 0, 0, 0,    // MVP matrix,
+                                      0, 0.05f, 0, 0,    // row-major!
+                                      0, 0, 1.0f, 0,
+                                      pos.x, pos.y, 0, 1 };
+
+            glUniform3f(location, color.x, color.y, color.z); // 3 floats
+
             location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
             glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
-            glBindVertexArray(buffer);  // Draw call
             glDrawArrays(GL_TRIANGLE_FAN, 0 /*startIdx*/, nv /*# Elements*/);
-        }
+            glBindVertexArray(vao);  // Draw call
     }
 };
 
-Atom Atom = Atom;
+Atom atom1 = Atom(vec2(0.2f,0.5f),1.0f,0.0f,1.0f);
+
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
 
-    Atom.Create();
+    atom1.Create();
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
 }
 
 
 void onDisplay() {
-
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    Atom.Draw();
 
+    atom1.Draw();
 
     glutSwapBuffers(); // exchange buffers for double buffering
 }
