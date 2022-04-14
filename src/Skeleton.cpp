@@ -64,7 +64,7 @@ class Camera2D {
     vec2 wCenter; // center in world coordinates
     vec2 wSize;   // width and height in world coordinates
 public:
-    Camera2D() : wCenter(0, 0), wSize(200, 200) { }
+    Camera2D() : wCenter(0, 0), wSize(10, 10) { }
 
     mat4 V() { return TranslateMatrix(-wCenter); }
     mat4 P() { return ScaleMatrix(vec2(2 / wSize.x, 2 / wSize.y)); }
@@ -83,7 +83,7 @@ class Atom{
     vec2 pos;
     vec3 color;
     float charge;
-    unsigned int vao;
+    unsigned int vao, vbo;
     float sx, sy, phi;
     vec2 wTranslate;
 
@@ -91,44 +91,36 @@ class Atom{
 
 public:
     Atom(vec2 pos, vec3 color){
-        pos.x = this->pos.x;
-        pos.y = this->pos.y;
-        color.x = this->color.x;
-        color.y = this->color.y;
-        color.z = this->color.z;
-    }
-
-
-    void Animate(float t) {
-        sx = 10;
-        sy = 10;
-        phi = t;
+        this->pos.x = pos.x;
+        this->pos.y = pos.y;
+        this->color.x = color.x;
+        this->color.y = color.y;
+        this->color.z = color.z;
     }
 
     mat4 M() {
-		mat4 Mscale(1, 0, 0, 0,
-			0, 1, 0, 0,
+		mat4 Mscale(0.2f, 0, 0, 0,
+			0, 0.2f, 0, 0,
 			0, 0, 0, 0,
 			0, 0, 0, 1); // scaling
 
-		mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
-			-sinf(phi), cosf(phi), 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1); // rotation
+//		mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
+//			-sinf(phi), cosf(phi), 0, 0,
+//			0, 0, 1, 0,
+//			0, 0, 0, 1); // rotation
 
 		mat4 Mtranslate(1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, 0, 0,
-			wTranslate.x, wTranslate.y, 0, 1); // translation
+			pos.x, pos.y, 0, 1); // translation
 
-		return Mscale * Mrotate * Mtranslate;	// model transformation
+		return Mscale * Mtranslate;	// model transformation
 	}
 
     void Create() {
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
 
-        unsigned int vbo;
         glGenBuffers(1, &vbo);	// Generate 2 buffers
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         // Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
@@ -161,7 +153,7 @@ public:
                                       pos.x, pos.y, 0, 1 };*/
 
             int location = glGetUniformLocation(gpuProgram.getId(), "color");
-            glUniform3f(location, 1, 0, 0); // 3 floats
+            glUniform3f(location, color.x, color.y, color.z); // 3 floats
             mat4 MVPTransform = M() * camera.V() * camera.P();
             //glUniform3f(location, color.x, color.y, color.z); // 3 floats
             //location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
@@ -175,13 +167,81 @@ public:
     }
 };
 
-Atom atom1 = Atom(vec2(0.7f,0.5f),vec3(1.0f,0.0f,1.0f));
-Atom atom2 = Atom(vec2(0.5f,0.5f),vec3(1.0f,0.0f,1.0f));
+class Molecule{
+    std::vector<Atom> Atoms;
+    unsigned int vao, vbo;
+    float sx, sy, phi;
+    vec2 wTranslate;
+public:
+    Molecule(){};
+
+    mat4 M() {
+        mat4 Mscale(sx, 0, 0, 0,
+                    0, sy, 0, 0,
+                    0, 0, 0, 0,
+                    0, 0, 0, 1); // scaling
+
+        mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
+                     -sinf(phi), cosf(phi), 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1); // rotation
+
+        mat4 Mtranslate(1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 0, 0,
+                        wTranslate.x, wTranslate.y, 0, 1); // translation
+
+        return Mscale * Mrotate * Mtranslate;	// model transformation
+    }
+
+
+
+    void Create(){
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        glGenBuffers(1, &vbo);	// Generate 2 buffers
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+        glEnableVertexAttribArray(0);  // attribute array 0
+
+        float atomNum = rand() % 8 + 2;
+        for (int i = 0; i < atomNum; ++i) {
+            float posX, posY;
+            posX = rand() % 95 + 1;
+            posY = rand() % 95 + 1;
+            Atom temp = Atom(vec2(posX/100,posY/100), vec3(0,1,0));
+            Atoms.push_back(temp);
+        }
+
+        glVertexAttribPointer(0,
+                              2, GL_FLOAT, GL_FALSE,
+                              0, NULL);
+    }
+
+    void Draw(){
+        for (int i = 0; i < sizeof(Atoms); ++i) {
+            mat4 MVPTransform = M() * camera.V() * camera.P();
+            Atoms[i].Create();
+            Atoms[i].Draw();
+            gpuProgram.setUniform(MVPTransform, "MVP");
+            glBindVertexArray(vao);
+        }
+        mat4 MVPTransform = M() * camera.V() * camera.P();
+        gpuProgram.setUniform(MVPTransform, "MVP");
+        glBindVertexArray(vao);
+        glDrawArrays(GL_LINE_STRIP, 0, Atoms.size() / 5);
+    }
+
+};
+
+Molecule molecule;
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
 
-    atom1.Create();
+
+    molecule.Create();
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
 
@@ -192,7 +252,7 @@ void onDisplay() {
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    atom1.Draw();
+    molecule.Draw();
 
 
     glutSwapBuffers(); // exchange buffers for double buffering
@@ -201,12 +261,12 @@ void onDisplay() {
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
     switch (key) {
-        case 'd': camera.Pan(vec2(-1, 0)); break;
-        case 'a': camera.Pan(vec2(+1, 0)); break;
-        case 's': camera.Pan(vec2(0, 1)); break;
-        case 'w': camera.Pan(vec2(0, -1)); break;
-        case 'z': camera.Zoom(0.9f); break;
-        case 'Z': camera.Zoom(1.1f); break;
+        case 'd': camera.Pan(vec2(-0.1f, 0)); break;
+        case 'a': camera.Pan(vec2(+0.1f, 0)); break;
+        case 's': camera.Pan(vec2(0, 0.1f)); break;
+        case 'w': camera.Pan(vec2(0, -0.1f)); break;
+        case 'z': camera.Zoom(0.09f); break;
+        case 'Z': camera.Zoom(0.11f); break;
     }
     glutPostRedisplay();
 }
@@ -230,5 +290,6 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 void onIdle() {
     long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
     float sec = time / 1000.0f;				// convert msec to sec
+    //atom1.Animate(sec);
     glutPostRedisplay();					// redraw the scene
 }
