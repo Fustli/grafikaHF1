@@ -42,7 +42,10 @@ const char * const vertexSource = R"(
 	layout(location = 0) in vec2 vp;	// Varying input: vp = vertex position is expected in attrib array 0
 
 	void main() {
-		gl_Position = vec4(vp.x, vp.y, 0, 1) * MVP;		// transform vp from modeling space to normalized device space
+		vec4 temp = vec4(vp.x, vp.y, 0, 1) * MVP;
+        float z = (temp.x * temp.x) + (temp.y * temp.y) + 1;
+        float w = sqrt(z);
+    gl_Position = vec4(temp.x/(w+1), temp.y/(w+1), 0, 1);		// transform vp from modeling space to normalized device space
 	}
 )";
 
@@ -116,11 +119,6 @@ public:
 			0, 0, 0, 0,
 			0, 0, 0, 1); // scaling
 
-//		mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
-//			-sinf(phi), cosf(phi), 0, 0,
-//			0, 0, 1, 0,
-//			0, 0, 0, 1); // rotation
-
 		mat4 Mtranslate(1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, 0, 0,
@@ -155,7 +153,7 @@ public:
                               0, NULL);
 
 
-        gpuProgram.create(vertexSource, fragmentSource, "outColor");
+
     }
 
     void Draw(){
@@ -164,8 +162,6 @@ public:
             mat4 MVPTransform = M() * camera.V() * camera.P();
             gpuProgram.setUniform(MVPTransform, "MVP");
 
-
-
             glBindVertexArray(vao);  // Draw call
             glDrawArrays(GL_TRIANGLE_FAN, 0 /*startIdx*/, nv /*# Elements*/);
     }
@@ -173,19 +169,12 @@ public:
 
 class Line{
     unsigned int vao, vbo;
+    std::vector<float> vertices;
     //std::vector<vec3>color;
-    vec2 startPoint;
-    vec2 endPoint;
-    float sx, sy, phi;
     vec2 wTranslate;
     const int nl = 100;
 
 public:
-    Line(Atom atom1, Atom atom2){
-        startPoint = atom1.getPos();
-        endPoint = atom2.getPos();
-    };
-
     void Create(){
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -195,21 +184,28 @@ public:
 
         glEnableVertexAttribArray(0);  // attribute array 0
 
-        vec2 vertices[nl];
-
         glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
-                     sizeof(vec2) * nl,  // # bytes
-                     vertices,	      	// address
+                     sizeof(float) * vertices.size(),  // # bytes
+                     &vertices[0],	      	// address
                      GL_STATIC_DRAW);	// we do not change later
-
-        glEnableVertexAttribArray(0);  // AttribArray 0
 
         glVertexAttribPointer(0,
                               2, GL_FLOAT, GL_FALSE,
                               0, NULL);
 
-        gpuProgram.create(vertexSource, fragmentSource, "outColor");
     }
+
+    void Clear(){
+        vertices.clear();
+    }
+
+    void AddLine(Atom atom1, Atom atom2){
+        vertices.push_back(atom1.getPos().x);
+        vertices.push_back(atom1.getPos().y);
+        vertices.push_back(atom2.getPos().x);
+        vertices.push_back(atom2.getPos().y);
+    }
+
 
     mat4 M() { // modeling transform
         return mat4(1, 0, 0, 0,
@@ -226,17 +222,18 @@ public:
     }
 
     void Draw(){
-        int location = glGetUniformLocation(gpuProgram.getId(), "color");
+       int location = glGetUniformLocation(gpuProgram.getId(), "color");
         glUniform3f(location, 1, 1, 1);
 
         mat4 MVPTransform = M() * camera.V() * camera.P();
         gpuProgram.setUniform(MVPTransform, "MVP");
         glBindVertexArray(vao);  // Draw call
-        glDrawArrays(GL_LINE_STRIP, 0 /*startIdx*/, nl /*# Elements*/);
+        glDrawArrays(GL_LINES, 0 /*startIdx*/, nl /*# Elements*/);
     }
 };
 
 class Molecules{
+    Line line;
     std::vector<Atom> Atoms1;
     std::vector<Atom> Atoms2;
     int atomNum1 = 0;
@@ -247,8 +244,10 @@ class Molecules{
 public:
 
     void Create() {
-
-        atomNum1 = rand() % 7 + 2;
+        line.Clear();
+        Atoms1.clear();
+        Atoms2.clear();
+        atomNum1 = RandomNumber(2,8);
         int charge1[atomNum1];
         int sumCharges1 = 0;
         for (int i = 0; i <= atomNum1-2; ++i) {
@@ -263,23 +262,23 @@ public:
         charge1[atomNum1-1] = sumCharges1 * -1;
 
         for (int i = 0; i <= atomNum1-1; ++i) {
-            float posX, posY;
-            posX = RandomNumber(600, 300);
-            posY = RandomNumber(600, 300);
+            float posX = RandomNumber(0, 700);
+            float posY = RandomNumber(0, 700);
 
             if(charge1[i] > 0) {
-                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(1, 0, 0), charge1[i]);
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(1, 0, 0), charge1[i]);
                 Atoms1.push_back(temp);
                 temp.Create();
             }
             else{
-                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 0, 1), charge1[i]);
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(0, 0, 1), charge1[i]);
                 Atoms1.push_back(temp);
                 temp.Create();
             }
+
         }
 
-        atomNum2 = rand() % 7 + 2;
+        atomNum2 = RandomNumber(2,8);
         int charge2[atomNum2];
         int sumCharges2 = 0;
         for (int i = 0; i <= atomNum2-2; ++i) {
@@ -290,39 +289,50 @@ public:
             charge2[i] = tempCharge;
             sumCharges2 += charge2[i];
         }
+
         charge2[atomNum2-1] = sumCharges2 * -1;
 
         for (int i = 0; i <= atomNum2-1; ++i) {
             float posX, posY;
-            posX = RandomNumber(100, -600);
-            posY = RandomNumber(100, -600);
+            posX = RandomNumber(-700, -100);
+            posY = RandomNumber(-700, 600);
 
             if(charge2[i] > 0) {
-                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(1, 0, 0), charge2[i]);
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(1, 0, 0), charge2[i]);
                 Atoms2.push_back(temp);
                 temp.Create();
             }
             else{
-                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 0, 1), charge2[i]);
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(0, 0, 1), charge2[i]);
                 Atoms2.push_back(temp);
                 temp.Create();
             }
 
         }
+
+        for (int i = 1; i <= atomNum1-1; ++i) {
+            line.AddLine(Atoms1[i-1], Atoms1[i]);
+        }
+
+        for (int i = 1; i <= atomNum2-1; ++i) {
+            line.AddLine(Atoms2[i-1], Atoms2[i]);
+        }
+
+        line.Create();
+
+
     }
 
     void Draw() {
         for (int i = 0; i <= atomNum1-1; ++i) {
             Atoms1[i].Draw();
+        }
+
+        for (int i = 0; i <= atomNum2-1; ++i) {
             Atoms2[i].Draw();
         }
 
-        for (int i = 1; i < atomNum1-1; ++i) {
-            Line line (Atoms1[i-1], Atoms1[i]);
-            line.Create();
-            line.Draw();
-        }
-
+        line.Draw();
     }
 };
 
@@ -334,17 +344,17 @@ void onInitialization() {
     glLineWidth(1.0f);
     srand(time(NULL)^getpid());
 
-    molecule.Create();
+    //molecule.Create();
 
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
 
 }
 
-
 void onDisplay() {
     glClearColor(0.5f, 0.5f, 0.5f, 0);
     glClear(GL_COLOR_BUFFER_BIT);
+
 
     molecule.Draw();
 
@@ -359,6 +369,7 @@ void onKeyboard(unsigned char key, int pX, int pY) {
         case 'a': camera.Pan(vec2(+0.1f, 0)); break;
         case 's': camera.Pan(vec2(0, 0.1f)); break;
         case 'w': camera.Pan(vec2(0, -0.1f)); break;
+        case ' ': molecule.Create(); break;
     }
     glutPostRedisplay();
 }
