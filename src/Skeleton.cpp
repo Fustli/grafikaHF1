@@ -81,13 +81,14 @@ float RandomNumber(float Min, float Max)
     return ((float(rand()) / float(RAND_MAX)) * (Max - Min)) + Min;
 }
 
+
 Camera2D camera;
 GPUProgram gpuProgram; // vertex and fragment shaders
 
 class Atom{
     vec2 pos;
     vec3 color;
-    float charge;
+    int charge;
     unsigned int vao, vbo;
     float sx, sy, phi;
     vec2 wTranslate;
@@ -96,13 +97,17 @@ class Atom{
     const int nv = 30;
 
 public:
-    Atom(vec2 pos, vec3 color, float charge){
+    Atom(vec2 pos, vec3 color, int charge){
         this->pos.x = pos.x;
         this->pos.y = pos.y;
         this->color.x = color.x;
         this->color.y = color.y;
         this->color.z = color.z;
-        this->charge = charge
+        this->charge = charge;
+    }
+
+    vec2 getPos(){
+        return pos;
     }
 
     mat4 M() {
@@ -166,41 +171,171 @@ public:
     }
 };
 
-class Molecule{
-    std::vector<Atom> Atoms;
-    int atomNum = 0;
+class Line{
+    unsigned int vao, vbo;
+    //std::vector<vec3>color;
+    vec2 startPoint;
+    vec2 endPoint;
+    float sx, sy, phi;
+    vec2 wTranslate;
+    const int nl = 100;
+
+public:
+    Line(Atom atom1, Atom atom2){
+        startPoint = atom1.getPos();
+        endPoint = atom2.getPos();
+    };
+
+    void Create(){
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+        glEnableVertexAttribArray(0);  // attribute array 0
+
+        vec2 vertices[nl];
+
+        glBufferData(GL_ARRAY_BUFFER, 	// Copy to GPU target
+                     sizeof(vec2) * nl,  // # bytes
+                     vertices,	      	// address
+                     GL_STATIC_DRAW);	// we do not change later
+
+        glEnableVertexAttribArray(0);  // AttribArray 0
+
+        glVertexAttribPointer(0,
+                              2, GL_FLOAT, GL_FALSE,
+                              0, NULL);
+
+        gpuProgram.create(vertexSource, fragmentSource, "outColor");
+    }
+
+    mat4 M() { // modeling transform
+        return mat4(1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    wTranslate.x, wTranslate.y, 0, 1); // translation
+    }
+
+    mat4 Minv() { // inverse modeling transform
+        return mat4(1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    -wTranslate.x, -wTranslate.y, 0, 1); // inverse translation
+    }
+
+    void Draw(){
+        int location = glGetUniformLocation(gpuProgram.getId(), "color");
+        glUniform3f(location, 1, 1, 1);
+
+        mat4 MVPTransform = M() * camera.V() * camera.P();
+        gpuProgram.setUniform(MVPTransform, "MVP");
+        glBindVertexArray(vao);  // Draw call
+        glDrawArrays(GL_LINE_STRIP, 0 /*startIdx*/, nl /*# Elements*/);
+    }
+};
+
+class Molecules{
+    std::vector<Atom> Atoms1;
+    std::vector<Atom> Atoms2;
+    int atomNum1 = 0;
+    int atomNum2 = 0;
     int randomNum = 0;
     float hydrogenMass = 1.66e-24;
+
 public:
-    Molecule(){};
 
     void Create() {
-        atomNum = rand() % 7 + 2;
-        randomNum = rand() %
-        for (int i = 0; i <= atomNum-1; ++i) {
-            float posX, posY;
-            posX = RandomNumber(600, -600);
-            posY = RandomNumber(600, -600);
 
-            Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 1, 0));
-            Atoms.push_back(temp);
+        atomNum1 = rand() % 7 + 2;
+        int charge1[atomNum1];
+        int sumCharges1 = 0;
+        for (int i = 0; i <= atomNum1-2; ++i) {
+            int tempCharge = 0;
+            while (tempCharge == 0){
+                tempCharge = RandomNumber(-10,10);
+            }
+            charge1[i] = tempCharge;
+            sumCharges1 += charge1[i];
+        }
+
+        charge1[atomNum1-1] = sumCharges1 * -1;
+
+        for (int i = 0; i <= atomNum1-1; ++i) {
+            float posX, posY;
+            posX = RandomNumber(600, 300);
+            posY = RandomNumber(600, 300);
+
+            if(charge1[i] > 0) {
+                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(1, 0, 0), charge1[i]);
+                Atoms1.push_back(temp);
+                temp.Create();
+            }
+            else{
+                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 0, 1), charge1[i]);
+                Atoms1.push_back(temp);
+                temp.Create();
+            }
+        }
+
+        atomNum2 = rand() % 7 + 2;
+        int charge2[atomNum2];
+        int sumCharges2 = 0;
+        for (int i = 0; i <= atomNum2-2; ++i) {
+            int tempCharge = 0;
+            while (tempCharge == 0){
+                tempCharge = RandomNumber(-10,10);
+            }
+            charge2[i] = tempCharge;
+            sumCharges2 += charge2[i];
+        }
+        charge2[atomNum2-1] = sumCharges2 * -1;
+
+        for (int i = 0; i <= atomNum2-1; ++i) {
+            float posX, posY;
+            posX = RandomNumber(100, -600);
+            posY = RandomNumber(100, -600);
+
+            if(charge2[i] > 0) {
+                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(1, 0, 0), charge2[i]);
+                Atoms2.push_back(temp);
+                temp.Create();
+            }
+            else{
+                Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 0, 1), charge2[i]);
+                Atoms2.push_back(temp);
+                temp.Create();
+            }
+
         }
     }
 
     void Draw() {
-        for (int i = 0; i <= atomNum-1; ++i) {
-            Atoms[i].Create();
-            Atoms[i].Draw();
+        for (int i = 0; i <= atomNum1-1; ++i) {
+            Atoms1[i].Draw();
+            Atoms2[i].Draw();
         }
+
+        for (int i = 1; i < atomNum1-1; ++i) {
+            Line line (Atoms1[i-1], Atoms1[i]);
+            line.Create();
+            line.Draw();
+        }
+
     }
 };
 
-Molecule molecule;
+Molecules molecule;
+
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
+    glLineWidth(1.0f);
     srand(time(NULL)^getpid());
+
     molecule.Create();
+
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
 
@@ -208,7 +343,7 @@ void onInitialization() {
 
 
 void onDisplay() {
-    glClearColor(0, 0, 0, 0);
+    glClearColor(0.5f, 0.5f, 0.5f, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     molecule.Draw();
@@ -224,8 +359,6 @@ void onKeyboard(unsigned char key, int pX, int pY) {
         case 'a': camera.Pan(vec2(+0.1f, 0)); break;
         case 's': camera.Pan(vec2(0, 0.1f)); break;
         case 'w': camera.Pan(vec2(0, -0.1f)); break;
-        case 'z': camera.Zoom(0.09f); break;
-        case 'Z': camera.Zoom(0.11f); break;
     }
     glutPostRedisplay();
 }
