@@ -76,6 +76,11 @@ public:
     void Pan(vec2 t) { wCenter = wCenter + t; }
 };
 
+float RandomNumber(float Min, float Max)
+{
+    return ((float(rand()) / float(RAND_MAX)) * (Max - Min)) + Min;
+}
+
 Camera2D camera;
 GPUProgram gpuProgram; // vertex and fragment shaders
 
@@ -86,21 +91,23 @@ class Atom{
     unsigned int vao, vbo;
     float sx, sy, phi;
     vec2 wTranslate;
+    float hydrogenMass = 1.66e-24;
 
     const int nv = 30;
 
 public:
-    Atom(vec2 pos, vec3 color){
+    Atom(vec2 pos, vec3 color, float charge){
         this->pos.x = pos.x;
         this->pos.y = pos.y;
         this->color.x = color.x;
         this->color.y = color.y;
         this->color.z = color.z;
+        this->charge = charge
     }
 
     mat4 M() {
-		mat4 Mscale(0.2f, 0, 0, 0,
-			0, 0.2f, 0, 0,
+		mat4 Mscale(0.3f, 0, 0, 0,
+			0, 0.3f, 0, 0,
 			0, 0, 0, 0,
 			0, 0, 0, 1); // scaling
 
@@ -147,17 +154,9 @@ public:
     }
 
     void Draw(){
-            /*float MVPtransf[4][4] = { 0.05f, 0, 0, 0,    // MVP matrix,
-                                      0, 0.05f, 0, 0,    // row-major!
-                                      0, 0, 1.0f, 0,
-                                      pos.x, pos.y, 0, 1 };*/
-
             int location = glGetUniformLocation(gpuProgram.getId(), "color");
-            glUniform3f(location, color.x, color.y, color.z); // 3 floats
+            glUniform3f(location, color.x, color.y, color.z);
             mat4 MVPTransform = M() * camera.V() * camera.P();
-            //glUniform3f(location, color.x, color.y, color.z); // 3 floats
-            //location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-            //glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransform[0][0]);	// Load a 4x4 row-major float matrix to the specified location
             gpuProgram.setUniform(MVPTransform, "MVP");
 
 
@@ -169,78 +168,38 @@ public:
 
 class Molecule{
     std::vector<Atom> Atoms;
-    unsigned int vao, vbo;
-    float sx, sy, phi;
-    vec2 wTranslate;
+    int atomNum = 0;
+    int randomNum = 0;
+    float hydrogenMass = 1.66e-24;
 public:
     Molecule(){};
 
-    mat4 M() {
-        mat4 Mscale(sx, 0, 0, 0,
-                    0, sy, 0, 0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 1); // scaling
-
-        mat4 Mrotate(cosf(phi), sinf(phi), 0, 0,
-                     -sinf(phi), cosf(phi), 0, 0,
-                     0, 0, 1, 0,
-                     0, 0, 0, 1); // rotation
-
-        mat4 Mtranslate(1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 0, 0,
-                        wTranslate.x, wTranslate.y, 0, 1); // translation
-
-        return Mscale * Mrotate * Mtranslate;	// model transformation
-    }
-
-
-
-    void Create(){
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        glGenBuffers(1, &vbo);	// Generate 2 buffers
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-        glEnableVertexAttribArray(0);  // attribute array 0
-
-        float atomNum = rand() % 8 + 2;
-        for (int i = 0; i < atomNum; ++i) {
+    void Create() {
+        atomNum = rand() % 7 + 2;
+        randomNum = rand() %
+        for (int i = 0; i <= atomNum-1; ++i) {
             float posX, posY;
-            posX = rand() % 95 + 1;
-            posY = rand() % 95 + 1;
-            Atom temp = Atom(vec2(posX/100,posY/100), vec3(0,1,0));
+            posX = RandomNumber(600, -600);
+            posY = RandomNumber(600, -600);
+
+            Atom temp = Atom(vec2(posX / 200, posY / 200), vec3(0, 1, 0));
             Atoms.push_back(temp);
         }
-
-        glVertexAttribPointer(0,
-                              2, GL_FLOAT, GL_FALSE,
-                              0, NULL);
     }
 
-    void Draw(){
-        for (int i = 0; i < sizeof(Atoms); ++i) {
-            mat4 MVPTransform = M() * camera.V() * camera.P();
+    void Draw() {
+        for (int i = 0; i <= atomNum-1; ++i) {
             Atoms[i].Create();
             Atoms[i].Draw();
-            gpuProgram.setUniform(MVPTransform, "MVP");
-            glBindVertexArray(vao);
         }
-        mat4 MVPTransform = M() * camera.V() * camera.P();
-        gpuProgram.setUniform(MVPTransform, "MVP");
-        glBindVertexArray(vao);
-        glDrawArrays(GL_LINE_STRIP, 0, Atoms.size() / 5);
     }
-
 };
 
 Molecule molecule;
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
-
-
+    srand(time(NULL)^getpid());
     molecule.Create();
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
