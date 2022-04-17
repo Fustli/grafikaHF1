@@ -84,47 +84,99 @@ float RandomNumber(float Min, float Max)
     return ((float(rand()) / float(RAND_MAX)) * (Max - Min)) + Min;
 }
 
+float Distance(vec2 pos1, vec2 pos2){
+    return sqrt(pow(pos1.x - pos2.x , 2) + pow(pos2.y - pos2.y, 2));
+}
+
+vec2 DirVector(vec2 pos1, vec2 pos2){
+    return vec2(pos2.x - pos1.x, pos2.y - pos1.y);
+}
 
 Camera2D camera;
 GPUProgram gpuProgram; // vertex and fragment shaders
 
 class Atom{
-    vec2 pos;
+    vec2 pos, pivotPoint = 0, F = 0;
     vec3 color;
-    int charge;
+    float charge = 0;
     unsigned int vao, vbo;
-    float sx, sy, phi;
+    float phi;
     vec2 wTranslate;
-    float hydrogenMass = 1.66e-24;
+    float mass, r;
 
     const int nv = 30;
 
 public:
-    Atom(vec2 pos, vec3 color, int charge){
+    Atom(vec2 pos, vec3 color, int charge, float mass){
         this->pos.x = pos.x;
         this->pos.y = pos.y;
         this->color.x = color.x;
         this->color.y = color.y;
         this->color.z = color.z;
-        this->charge = charge;
+        this->charge = charge * 1.602e-19;
+        this->mass = mass;
+    }
+
+    float getR(){
+        return r;
+    }
+
+    void setR(float R){
+        this->r = R;
+    }
+
+    vec2 getForce(){
+        return F;
+    }
+
+    void setForce(vec2 F){
+        this->F = F;
     }
 
     vec2 getPos(){
         return pos;
     }
 
+    void setPos(vec2 pos){
+        this->pos.x = pos.x;
+        this->pos.y = pos.y;
+    }
+
+    int getCharge(){
+        return charge;
+    }
+
+    float getMass(){
+        return mass;
+    }
+
+    void Animate(float dt, float omega, vec2 pivotPoint, vec2 velocity){
+        phi = phi + omega + dt;
+        pos = pos + velocity + dt;
+        this->pivotPoint = pivotPoint;
+    }
+
     mat4 M() {
-		mat4 Mscale(0.3f, 0, 0, 0,
-			0, 0.3f, 0, 0,
+		mat4 Mscale(0.6f, 0, 0, 0,
+			0, 0.6f, 0, 0,
 			0, 0, 0, 0,
 			0, 0, 0, 1); // scaling
+
+        mat4 MpivotTranslate(1, 0, 0, 0,
+                             0, 1, 0, 0,
+                             0, 0, 1, 0,
+                             -pivotPoint.x, -pivotPoint.y, 0, 1);
+        mat4 MinversePivotTranslate(1, 0, 0, 0,
+                                    0, 1, 0, 0,
+                                    0, 0, 1, 0,
+                                    -(-pivotPoint.x), -(-pivotPoint.y), 0, 1);
 
 		mat4 Mtranslate(1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, 0, 0,
 			pos.x, pos.y, 0, 1); // translation
 
-		return Mscale * Mtranslate;	// model transformation
+		return Mscale * Mtranslate * MinversePivotTranslate * MpivotTranslate;	// model transformation
 	}
 
     void Create() {
@@ -151,9 +203,6 @@ public:
         glVertexAttribPointer(0,
                               2, GL_FLOAT, GL_FALSE,
                               0, NULL);
-
-
-
     }
 
     void Draw(){
@@ -170,11 +219,13 @@ public:
 class Line{
     unsigned int vao, vbo;
     std::vector<float> vertices;
-    //std::vector<vec3>color;
     vec2 wTranslate;
     const int nl = 100;
 
 public:
+
+
+
     void Create(){
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -231,120 +282,229 @@ public:
         glDrawArrays(GL_LINES, 0 /*startIdx*/, nl /*# Elements*/);
     }
 };
+int posDif = 1;
+
+
 
 class Molecules{
+    std::vector<Atom> Atoms;
     Line line;
-    std::vector<Atom> Atoms1;
-    std::vector<Atom> Atoms2;
-    int atomNum1 = 0;
-    int atomNum2 = 0;
-    int randomNum = 0;
-    float hydrogenMass = 1.66e-24;
+    vec2 centreOfMass, velocity = vec2(0,0), F = 0;
+    int atomNum = 0;
+    float omega = 0, mass = 0;
+    const float hydrogenMass = 1.66e-24;
+    float theta;
+    vec3 M = vec3(0,0,0);
+
 
 public:
 
+    float getTheta(){
+        return theta;
+    }
+
+    void setTheta(float theta){
+        this->theta = theta;
+    }
+
+    float getOmega(){
+        return omega;
+    }
+
+    void setOmega(float omega){
+        this->omega = omega;
+    }
+
+    float getMass(){
+        return mass;
+    }
+
+    void setMass(float m){
+        this->mass = m;
+    }
+
+    vec2 getForce(){
+        return F;
+    }
+
+    void setForce(vec2 F){
+        this->F = F;
+    }
+
+    vec3 getM(){
+        return M;
+    }
+
+    void setM(vec3 M){
+        this->M = M;
+    }
+
+    vec2 getCentreOfMass(){
+        return centreOfMass;
+    }
+
+    std::vector<Atom> getAtoms(){
+        return Atoms;
+    }
+
+    vec2 getVelocity(){
+        return velocity;
+    }
+
+    void setVelocity(vec2 velocity){
+        this->velocity = velocity;
+    }
+
+    int getAtomSize(){
+        return Atoms.size();
+    }
+
+    vec2 CalcCentreOfMass(){
+        float mX = 0;
+        float mY = 0;
+        float M = 0;
+        for (int i = 0; i <= atomNum-1; ++i) {
+            mX += Atoms[i].getMass() * Atoms[i].getPos().x;
+            mY += Atoms[i].getMass() * Atoms[i].getPos().y;
+            M += Atoms[i].getMass();
+        }
+        mX /= M;
+        mY /= M;
+        return vec2(mX,mY);
+    }
+
+    float CalcTorque(){
+        float tempTheta;
+
+        //tömegközéppont eltolása az origóba, atomok vele tolása
+        for (int i = 0; i <= atomNum-1; ++i) {
+            Atoms[i].setPos(vec2(Atoms[i].getPos() - centreOfMass));
+        }
+
+        //tehetetlenségi nyomaték számolása
+        for (int i = 0; i <= atomNum-1; ++i) {
+            tempTheta += (Atoms[i].getMass()) * (dot(Atoms[i].getPos(),Atoms[i].getPos()));
+        }
+
+        //tömegközéppont eltolása az origóból, atomok vele tolása
+        for (int i = 0; i <= atomNum-1; ++i) {
+            Atoms[i].setPos(vec2(Atoms[i].getPos() + centreOfMass));
+        }
+
+        return tempTheta;
+    }
+
     void Create() {
         line.Clear();
-        Atoms1.clear();
-        Atoms2.clear();
-        atomNum1 = RandomNumber(2,8);
-        int charge1[atomNum1];
-        int sumCharges1 = 0;
-        for (int i = 0; i <= atomNum1-2; ++i) {
+        Atoms.clear();
+
+        atomNum = RandomNumber(2,8);
+        int charge[atomNum];
+        int mass[atomNum];
+        int sumCharges = 0;
+        for (int i = 0; i <= atomNum-2; ++i) {
             int tempCharge = 0;
+            int tempMass = 0;
             while (tempCharge == 0){
                 tempCharge = RandomNumber(-10,10);
+                tempMass = rand() % 9 + 1;
             }
-            charge1[i] = tempCharge;
-            sumCharges1 += charge1[i];
+            charge[i] = tempCharge;
+            mass[i] = tempMass;
+            sumCharges += charge[i];
         }
 
-        charge1[atomNum1-1] = sumCharges1 * -1;
+        charge[atomNum-1] = sumCharges * -1;
 
-        for (int i = 0; i <= atomNum1-1; ++i) {
-            float posX = RandomNumber(0, 700);
-            float posY = RandomNumber(0, 700);
+        for (int i = 0; i <= atomNum-1; ++i) {
+            float posX = RandomNumber(0, 1000) * posDif;
+            float posY = RandomNumber(0, 1000) * posDif;
 
-            if(charge1[i] > 0) {
-                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(1, 0, 0), charge1[i]);
-                Atoms1.push_back(temp);
+            if(charge[i] > 0) {
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(1, 0, 0), charge[i], (float)mass[i] * hydrogenMass);
+                Atoms.push_back(temp);
                 temp.Create();
             }
             else{
-                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(0, 0, 1), charge1[i]);
-                Atoms1.push_back(temp);
+                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(0, 0, 1), charge[i], (float)mass[i] * hydrogenMass);
+                Atoms.push_back(temp);
                 temp.Create();
             }
-
         }
+        centreOfMass = CalcCentreOfMass();
+        theta = CalcTorque();
 
-        atomNum2 = RandomNumber(2,8);
-        int charge2[atomNum2];
-        int sumCharges2 = 0;
-        for (int i = 0; i <= atomNum2-2; ++i) {
-            int tempCharge = 0;
-            while (tempCharge == 0){
-                tempCharge = RandomNumber(-10,10);
-            }
-            charge2[i] = tempCharge;
-            sumCharges2 += charge2[i];
+        for (int i = 1; i <= atomNum-1; ++i) {
+            line.AddLine(Atoms[i-1], Atoms[i]);
         }
-
-        charge2[atomNum2-1] = sumCharges2 * -1;
-
-        for (int i = 0; i <= atomNum2-1; ++i) {
-            float posX, posY;
-            posX = RandomNumber(-700, -100);
-            posY = RandomNumber(-700, 600);
-
-            if(charge2[i] > 0) {
-                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(1, 0, 0), charge2[i]);
-                Atoms2.push_back(temp);
-                temp.Create();
-            }
-            else{
-                Atom temp = Atom(vec2(posX / 150, posY / 150), vec3(0, 0, 1), charge2[i]);
-                Atoms2.push_back(temp);
-                temp.Create();
-            }
-
-        }
-
-        for (int i = 1; i <= atomNum1-1; ++i) {
-            line.AddLine(Atoms1[i-1], Atoms1[i]);
-        }
-
-        for (int i = 1; i <= atomNum2-1; ++i) {
-            line.AddLine(Atoms2[i-1], Atoms2[i]);
-        }
-
         line.Create();
-
-
+        posDif *= -1;
     }
 
     void Draw() {
-        for (int i = 0; i <= atomNum1-1; ++i) {
-            Atoms1[i].Draw();
-        }
-
-        for (int i = 0; i <= atomNum2-1; ++i) {
-            Atoms2[i].Draw();
-        }
-
         line.Draw();
+        for (int i = 0; i <= atomNum-1; ++i) {
+            Atoms[i].Draw();
+        }
+    }
+
+    void Animate(float dt){
+        for (int i = 0; i <= Atoms.size()-1; ++i) {
+            Atoms[i].Animate(dt, omega, centreOfMass, velocity);
+        }
     }
 };
 
-Molecules molecule;
+
+
+
+
+
+
+std::vector<Molecules> molecules;
+Molecules molecule1;
+Molecules molecule2;
+
+void Move(float dt){
+    for (int i = 0; i <= molecules.size()-1; ++i) {
+        for (int j = 0; j <= molecules[i].getAtomSize()-1; ++j) {
+            for (int k = 0; k <= molecules.size()-1; ++k) {
+                if(i != k){
+                    for (int l = 0; l <= molecules[l].getAtomSize()-1; ++l) {
+                        float tempF = 0;
+                        tempF = molecules[i].getAtoms()[j].getCharge() + (molecules[i].getAtoms()[j].getCharge() +
+                                molecules[k].getAtoms()[l].getCharge())
+                                / (2 * M_PI * 8.85e-3 * length(molecules[i].getAtoms()[j].getPos() - molecules[k].getAtoms()[l].getPos()
+                                * (molecules[k].getAtoms()[l].getPos() - molecules[i].getAtoms()[j].getPos())));
+                        molecules[i].getAtoms()[j].setForce(tempF);
+                    }
+                }
+            }
+            molecules[i].getAtoms()[j].setForce(molecules[i].getAtoms()[j].getForce() - 1 * molecules[i].getVelocity());
+
+            vec2 r = DirVector(molecules[i].getCentreOfMass(), molecules[i].getAtoms()[j].getPos());
+            molecules[i].setM(molecules[i].getM() + cross(r, molecules[i].getAtoms()[j].getForce()));
+            molecules[i].setForce(molecules[i].getForce() + (molecules[i].getAtoms()[j].getForce() * normalize(r)));
+        }
+
+        molecules[i].setVelocity(molecules[i].getVelocity() + (molecules[i].getForce() / molecules[i].getMass()) * dt);
+        molecules[i].setOmega(molecules[i].getOmega() + (molecules[i].getM().z) / molecules[i].CalcTorque() * dt);
+        molecules[i].Animate(dt);
+    }
+
+
+}
 
 
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
     glLineWidth(1.0f);
-    srand(time(NULL)^getpid());
+    srand(time(NULL));
 
     //molecule.Create();
+    molecules.push_back(molecule1);
+    molecules.push_back(molecule2);
+
 
 
     gpuProgram.create(vertexSource, fragmentSource, "outColor");
@@ -355,9 +515,9 @@ void onDisplay() {
     glClearColor(0.5f, 0.5f, 0.5f, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-
-    molecule.Draw();
-
+    for (int i = 0; i <= molecules.size()-1; ++i) {
+        molecules[i].Draw();
+    }
 
     glutSwapBuffers(); // exchange buffers for double buffering
 }
@@ -369,7 +529,12 @@ void onKeyboard(unsigned char key, int pX, int pY) {
         case 'a': camera.Pan(vec2(+0.1f, 0)); break;
         case 's': camera.Pan(vec2(0, 0.1f)); break;
         case 'w': camera.Pan(vec2(0, -0.1f)); break;
-        case ' ': molecule.Create(); break;
+        case ' ': molecules.clear();
+                  molecule1.Create();
+                  molecule2.Create();
+                  molecules.push_back(molecule1);
+                  molecules.push_back(molecule2);
+                  break;
     }
     glutPostRedisplay();
 }
@@ -379,20 +544,22 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
 // Move mouse with key pressed
-void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	// Convert to normalized device space
+void onMouseMotion(int pX, int pY) {
 
 }
 
 // Mouse click event
-void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
+void onMouse(int button, int state, int pX, int pY) {
 	}
 
 
-// Idle event indicating that some time elapsed: do animation here
+float dt = 0.01;
 void onIdle() {
     long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
-    float sec = time / 1000.0f;				// convert msec to sec
-    //atom1.Animate(sec);
+
+    /*if(time % 10 == 0){
+        Move(dt);
+    }*/
+
     glutPostRedisplay();					// redraw the scene
 }
